@@ -153,7 +153,7 @@ The datasets are available in [eos](http://information-technology.web.cern.ch/se
 /eos/project/i/iml/IMLChallengeQG/gluons_modified
 ```
 
-Alternatively, data can be accessed through xrootd ```root://eosuser.cern.ch//eos/project/i/iml/IMLChallengeQG```.
+Alternatively, data can be accessed through xrootd ```root://eosuser.cern.ch//eos/project/i/iml/IMLChallengeQG```. (Requires root with xrootd, a cern kerberos ticket and the IML e-group membership, see below)
 
 **Important**: in order to get access to the data set you need to have subscribed the IML mailing list (click [here](https://simba3.web.cern.ch/simba3/SelfSubscription.aspx?groupName=lhc-machinelearning-wg) to subscribe)
 
