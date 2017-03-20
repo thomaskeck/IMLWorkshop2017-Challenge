@@ -47,6 +47,8 @@ We realize that the few hours allocated for this challenge are not enough to dev
 
 Finally, we also believe this also represents an excellent playground for people who are relatively new to machine learning. For instance, people who have just followed the tutorial can test they newly acquired skills on this data.
 
+The provided recipes are intentionally very basic, as their main goal is to show how to access the data and provide a quick start for people new to machine learning.
+
 We hope that you will enjoy this mini challenge!
 
 <a class="mk-toclify" id="challenge-rules"></a>
@@ -336,7 +338,7 @@ Here is a direct link to the chat room reserved for the challenge: https://matte
 We would like to thank Maurizio Pierini, Danilo Piparo, Enric Tejedor Saavedra, Rudiger Haake, Leticia Cunqueiro, Stefan Wunsch for their help in the preparation of the challenge and testing of the examples.
 
 <a class="mk-toclify" id="faq-and-known-issues"></a>
-# FAQ and Known Issues # 
+# FAQ and Known Issues 
 
 See [here](https://gitlab.cern.ch/IML-WG/IMLWorkshop2017-Challenge/blob/master/KnownIssues.md)
 
