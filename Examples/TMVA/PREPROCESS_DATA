@@ -1,0 +1,25 @@
+#!/bin/bash
+
+echo "Please note that this script does not process the full dataset. It uses only a very small fraction of it by default."
+
+# Get gluon jet ROOT files
+# NOTE: Select all available files by setting `..._gluons_*.root` or any other regular expression.
+FILES_GLUONS=""
+for file in $(ls /eos/project/i/iml/IMLChallengeQG/gluons_standard/REDUCED_gluons_[0-6][0-9].root)
+do
+    FILES_GLUONS="$FILES_GLUONS $file"
+done
+
+# Get quark jet ROOT files
+FILES_QUARKS=""
+for file in $(ls /eos/project/i/iml/IMLChallengeQG/quarks_standard/REDUCED_quarks_[0-3][0-9].root)
+do
+    FILES_QUARKS="$FILES_QUARKS $file"
+done
+
+# Preprocess the files
+python ./preprocess_data.py \
+    --gluons "$FILES_GLUONS" \
+    --quarks "$FILES_QUARKS" \
+    --tracks 5\
+    --towers 15 
