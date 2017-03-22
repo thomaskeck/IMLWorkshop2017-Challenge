@@ -22,7 +22,7 @@ def apply(X, session, x, p):
 
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.ERROR)
-    name = 'inference_model_final-479999'    
+    name = 'inference_model_final_transformed-9999.meta'    
     #name = 'inference_model_with_boost-999999'    
     with tf.Graph().as_default() as graph:
         config = tf.ConfigProto()
@@ -40,6 +40,15 @@ if __name__ == '__main__':
             """
             # Run trained network on the training sample
             train_data = pandas.read_pickle('inference_training_sample.pickle')
+            for i in range(52):
+                train_data['trackEta_' + str(i)] -= train_data['jetEta']
+                train_data['trackPhi_' + str(i)] -= train_data['jetPhi']
+                train_data['trackPt_' + str(i)] /= train_data['jetPt']
+            for i in range(67):
+                train_data['towerEta_' + str(i)] -= train_data['jetEta']
+                train_data['towerE_' + str(i)] /= train_data['jetPt']
+                train_data['towerEem_' + str(i)] /= train_data['jetPt']
+                train_data['towerEhad_' + str(i)] /= train_data['jetPt']
             x_train = train_data[variables].values
             y_train = train_data['is_quark'].values
             x_train = np.require(x_train, dtype=np.float32, requirements=['A', 'W', 'C', 'O'])
@@ -58,6 +67,15 @@ if __name__ == '__main__':
             """
             # Run trained network on the test sample
             test_data = pandas.read_pickle('inference_test_sample.pickle')
+            for i in range(52):
+                test_data['trackEta_' + str(i)] -= test_data['jetEta']
+                test_data['trackPhi_' + str(i)] -= test_data['jetPhi']
+                test_data['trackPt_' + str(i)] /= test_data['jetPt']
+            for i in range(67):
+                test_data['towerEta_' + str(i)] -= test_data['jetEta']
+                test_data['towerE_' + str(i)] /= test_data['jetPt']
+                test_data['towerEem_' + str(i)] /= test_data['jetPt']
+                test_data['towerEhad_' + str(i)] /= test_data['jetPt']
             x_test = test_data[variables].values
             y_test = test_data['is_quark'].values
             x_test = np.require(x_test, dtype=np.float32, requirements=['A', 'W', 'C', 'O'])
