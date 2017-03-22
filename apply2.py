@@ -22,7 +22,7 @@ def apply(X, session, x, p):
 
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.ERROR)
-    name = 'inference_model_final_transformed-9999.meta'    
+    name = 'inference_model_final_transformed-229999' 
     #name = 'inference_model_with_boost-999999'    
     with tf.Graph().as_default() as graph:
         config = tf.ConfigProto()

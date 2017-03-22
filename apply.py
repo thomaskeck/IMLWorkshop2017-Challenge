@@ -22,8 +22,7 @@ def apply(X, session, x, p):
 
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.ERROR)
-    name = 'inference_model_final-479999'    
-    #name = 'inference_model_with_boost-999999'    
+    name = 'inference_model_final-999999'    
     with tf.Graph().as_default() as graph:
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
@@ -37,7 +36,6 @@ if __name__ == '__main__':
             y = tf.get_collection('y')[0]
             pred = tf.get_collection('p')[0]
 
-            """
             # Run trained network on the training sample
             train_data = pandas.read_pickle('inference_training_sample.pickle')
             x_train = train_data[variables].values
@@ -55,7 +53,7 @@ if __name__ == '__main__':
             df_result_train.to_pickle('result_train_with_boost.pickle')
             print("train", sklearn.metrics.roc_auc_score(y_train, p))
             del train_data
-            """
+            
             # Run trained network on the test sample
             test_data = pandas.read_pickle('inference_test_sample.pickle')
             x_test = test_data[variables].values
