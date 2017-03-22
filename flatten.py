@@ -27,6 +27,12 @@ for name in ['gluons_modified', 'gluons_standard', 'quarks_modified', 'quarks_st
     maxtracks = 52 # df.ntracks.max()
     trackorder = df.trackPt.apply(myargsort).values
 
+    # TODO
+    # Center tracks and towers to mean value of each jet
+    # - Translate to largest pt axis
+    # - Rotate to second largest pt axis
+    # - Flip image
+
     for column in ['trackPt', 'trackEta', 'trackPhi', 'trackCharge']:
         print("Process column", column)
         zero_padded_array = np.zeros((len(trackorder), maxtracks))

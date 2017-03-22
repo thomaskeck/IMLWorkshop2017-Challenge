@@ -22,8 +22,8 @@ def apply(X, session, x, p):
 
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.ERROR)
-    #name = 'boost_model-99999'    
-    name = 'inference_model_with_boost-999999'    
+    name = 'inference_model_final-259999'    
+    #name = 'inference_model_with_boost-999999'    
     with tf.Graph().as_default() as graph:
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
@@ -33,28 +33,11 @@ if __name__ == '__main__':
 
             saver.restore(session, tf.train.latest_checkpoint('./'))
 
-            """
-            x = graph.get_operation_by_name("x").outputs[0]
-            weights = graph.get_operation_by_name("hidden1/weights").outputs[0] 
-            biases = graph.get_operation_by_name("hidden1/biases").outputs[0] 
-            pred = tf.sigmoid(tf.matmul(x, weights) + biases)
-            weights = graph.get_operation_by_name("hidden2/weights").outputs[0] 
-            biases = graph.get_operation_by_name("hidden2/biases").outputs[0] 
-            pred = tf.sigmoid(tf.matmul(pred, weights) + biases)
-            weights = graph.get_operation_by_name("hidden3/weights").outputs[0] 
-            biases = graph.get_operation_by_name("hidden3/biases").outputs[0] 
-            pred = tf.sigmoid(tf.matmul(pred, weights) + biases)
-            weights = graph.get_operation_by_name("hidden4/weights").outputs[0] 
-            biases = graph.get_operation_by_name("hidden4/biases").outputs[0] 
-            pred = tf.sigmoid(tf.matmul(pred, weights) + biases)
-            weights = graph.get_operation_by_name("sigmoid/weights").outputs[0] 
-            biases = graph.get_operation_by_name("sigmoid/biases").outputs[0] 
-            pred = tf.sigmoid(tf.matmul(pred, weights) + biases)
-            """
             x = tf.get_collection('x')[0]
             y = tf.get_collection('y')[0]
             pred = tf.get_collection('p')[0]
 
+            """
             # Run trained network on the training sample
             train_data = pandas.read_pickle('inference_training_sample.pickle')
             x_train = train_data[variables].values
@@ -72,7 +55,7 @@ if __name__ == '__main__':
             df_result_train.to_pickle('result_train_with_boost.pickle')
             print("train", sklearn.metrics.roc_auc_score(y_train, p))
             del train_data
-
+            """
             # Run trained network on the test sample
             test_data = pandas.read_pickle('inference_test_sample.pickle')
             x_test = test_data[variables].values

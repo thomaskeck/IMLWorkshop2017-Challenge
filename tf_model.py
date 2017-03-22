@@ -115,8 +115,9 @@ if __name__ == '__main__':
 
             batch_xs, batch_ys = next(batch)
             batch_ws = np.ones(len(batch_ys))
-            # TODO Put in correct fractions
-            batch_ws = np.where(batch_ys[:, 0] == 1, 0.5 * (0.3 / 0.7 + 1), 0.5 * (0.7 / 0.3 + 1)) * batch_ws
+            # Correct signal to background fraction (see below)
+            # We have 71% background (standard) and 29% signal (modified)
+            batch_ws = np.where(batch_ys[:, 0] == 1, 0.5 * (0.71 / 0.29 + 1), 0.5 * (0.29 / 0.71 + 1)) * batch_ws
             batch_ws = np.reshape(batch_ws, (len(batch_ys), 1))
             batch_ws = np.require(batch_ws, dtype=np.float32, requirements=['A', 'W', 'C', 'O'])
             feed_dict = {x: batch_xs, y: batch_ys, w: batch_ws}
@@ -153,11 +154,12 @@ if __name__ == '__main__':
             batch_ws = np.ones(len(batch_ys))
         # We normalise the events, so that there is the same amount of signal-weight and background-weight
         # in the training, using the ratios we know from the standard datasets
-        # 0.7 signal (quarks), 0.3 background (gluons)
+        # 71% signal (quarks), 29% background (gluons)
         # The formula is:
         #   w_s = 1/2 * (1 + N_B / N_S)
         #   w_b = 1/2 * (1 + N_S / N_B)
-        batch_ws = np.where(batch_ys[:, 0] == 1, 0.5 * (0.3 / 0.7 + 1), 0.5 * (0.7 / 0.3 + 1)) * batch_ws
+        # The numbers are the opposite of the ones in the boosting network, this is by chance!
+        batch_ws = np.where(batch_ys[:, 0] == 1, 0.5 * (0.29 / 0.71 + 1), 0.5 * (0.71 / 0.29 + 1)) * batch_ws
         batch_ws = np.reshape(batch_ws, (len(batch_ys), 1))
         batch_ws = np.require(batch_ws, dtype=np.float32, requirements=['A', 'W', 'C', 'O'])
 
@@ -169,9 +171,6 @@ if __name__ == '__main__':
 
         if (step + 1) % 10000 == 0 or (step + 1) == n_iterations:
             print('Save model')
-            if use_boost:
-                saver.save(session, 'inference_model_with_boost', global_step=step)
-            else:
-                saver.save(session, 'inference_model_without_boost', global_step=step)
+            saver.save(session, 'inference_model_final', global_step=step)
   
     del batch
