@@ -1,7 +1,22 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+# Thomas Keck and Jochen Gemmler 2017
+
+# We flatten our pickled dataframes,
+# by adding 52*4 track columns (for each of the possible 52 tracks and 4 variables per track)
+#    adding 67*5 tower columns (for each of the possible 67 towers and 5 variables per tower)
+# The columns are sorted according to decreasing transverse momentum and energy for tracks and towers, respectively.
+# If there are less tracks or towers the remaining columns are set to 0
+
 import pandas
 import numpy as np
 
 def myargsort(x):
+    """
+    Sort the given ndarray, reverse the order and return the indices as integers
+    We use this indices to sort our columns below
+    """
     return np.argsort(x)[::-1].astype(int)
 
 for name in ['gluons_modified', 'gluons_standard', 'quarks_modified', 'quarks_standard']:
@@ -31,11 +46,12 @@ for name in ['gluons_modified', 'gluons_standard', 'quarks_modified', 'quarks_st
         for i in range(maxtowers):
             df[column + '_' + str(i)] = zero_padded_array[:, i]
             
-    # Save some memory
+    # Save some memory, by removing the original columns containing the arrays converted from root
     for column in ['trackPt', 'trackEta', 'trackPhi', 'trackCharge']:
         del df[column]
     for column in ['towerE', 'towerEem', 'towerEhad', 'towerEta', 'towerPhi']:
         del df[column]
-    
+   
+    # Save the file with the postfix _flat, for flattened
     df.to_pickle(name + '_flat.pickle')
 

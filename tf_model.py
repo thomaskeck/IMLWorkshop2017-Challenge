@@ -1,23 +1,36 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# Thomas Keck 2017
+# Thomas Keck and Jochen Gemmler 2017
 
 import numpy as np
 import tensorflow as tf
 import pandas
+import os
 
+os.environ['CUDA_VISIBLE_DEVICES']='2'
 
+# We use all available variables
+# - Global variables of the jet
+# - Track variables for each track sorted by decreasing transverse momentum
+# - Tower variables for each tower sorted by decreasing energy
 variables = ['jetPt', 'jetEta', 'jetPhi', 'jetMass', 'ntracks', 'ntowers']
+
 for v in ['trackPt', 'trackEta', 'trackPhi', 'trackCharge']:
     for i in range(52):
         variables += [v + '_' + str(i)]
+
 for v in ['towerE', 'towerEem', 'towerEhad', 'towerEta', 'towerPhi']:
     for i in range(67):
         variables += [v + '_' + str(i)]
 
 
 def batch_generator(filename, target, batch_size):
+    """
+    Returns random batch from the datafile, and ensures
+    that the numpy ndarrays have the correct format, to avoid
+    any weird memory problems
+    """
     df = pandas.read_pickle(filename)
     while True:
         df = df.sample(frac=1).reset_index(drop=True)
@@ -31,6 +44,11 @@ def batch_generator(filename, target, batch_size):
 
 
 def get_model(x):
+    """
+    Returns our neural network model.
+    4 Hidden Layers with sigmoid activation and dropout.
+    This same network is used for the boosting and the inference network
+    """
     def layer(x, shape, name, unit=tf.sigmoid):
         with tf.name_scope(name) as scope:
             weights = tf.Variable(tf.truncated_normal(shape, stddev=1.0 / np.sqrt(float(shape[0]))), name='weights')
@@ -38,57 +56,70 @@ def get_model(x):
             layer = unit(tf.matmul(x, weights) + biases)
         return layer
 
-    # Boost network
-    hidden1 = layer(x, [len(variables), 200], 'hidden1')
-    hidden2 = layer(hidden1, [200, 200], 'hidden2')
-    hidden3 = layer(hidden2, [200, 200], 'hidden3')
-    hidden4 = layer(hidden3, [200, 200], 'hidden4')
-    activation = layer(hidden4, [200, 1], 'sigmoid', unit=tf.sigmoid)
+    dropout_const = .75
+    hidden1 = layer(x, [len(variables), 400], 'hidden1')
+    hidden1 = tf.nn.dropout(hidden1, dropout_const)
+    hidden2 = layer(hidden1, [400, 400], 'hidden2')
+    hidden2 = tf.nn.dropout(hidden2, dropout_const)
+    hidden3 = layer(hidden2, [400, 400], 'hidden3')
+    hidden3 = tf.nn.dropout(hidden3, dropout_const)
+    hidden4 = layer(hidden3, [400, 400], 'hidden4')
+    hidden4 = tf.nn.dropout(hidden4, dropout_const)
+    activation = layer(hidden4, [400, 1], 'sigmoid', unit=tf.sigmoid)
     return activation
 
 
 if __name__ == '__main__':
 
-    n_iterations = int(1e5)
+    n_iterations = int(1e6)
     use_boost = True
+    epsilon = 1e-5
     
     x = tf.placeholder(tf.float32, [None, len(variables)], name='x')
     y = tf.placeholder(tf.float32, [None, 1], name='y')
     w = tf.placeholder(tf.float32, [None, 1], name='w')
     
+    optimizer = tf.train.AdamOptimizer(learning_rate=0.0001)
 
+    # Boost model
+    # This model is used to train standard against modified
+    # The model learns the differences and outputs a probability to be "modified" (=data),
+    # this probability is used to weight the inference training input,
+    # this technique is known in literature to remove differences between data and MC
     boost_activation = get_model(x)
-    
-    epsilon = 1e-5
-    loss_boost = -tf.reduce_mean(y * tf.log(boost_activation + epsilon) +
-                                (1.0 - y) * tf.log(1 - boost_activation + epsilon))
-  
-    optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
+    loss_boost = -tf.reduce_sum(y * w * tf.log(boost_activation + epsilon) +
+                                (1.0 - y) * w * tf.log(1 - boost_activation + epsilon)) / tf.reduce_sum(w)
     minimize_boost = optimizer.minimize(loss_boost)
     
+    # Inference model
+    # Trained to distinguish quarks from gluon jets
     inference_activation = get_model(x)
-    
     loss = -tf.reduce_sum(y * w * tf.log(inference_activation + epsilon) +
                                 (1.0 - y) * w * tf.log(1 - inference_activation + epsilon)) / tf.reduce_sum(w)
-  
     minimize = optimizer.minimize(loss)
     
+    # Initialise tensorflow
     init = tf.global_variables_initializer()
-
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     session = tf.Session(config=config)
     session.run(init)
     
+    # Train Boost Network
     if use_boost:
         saver = tf.train.Saver()
         
-        batch = batch_generator('boost_training_sample.pickle', 'is_data', 100)
+        batch = batch_generator('boost_training_sample.pickle', 'is_data', 200)
 
-        for step in range(n_iterations):
+        for step in range(n_iterations // 10):
 
             batch_xs, batch_ys = next(batch)
-            feed_dict = {x: batch_xs, y: batch_ys}
+            batch_ws = np.ones(len(batch_ys))
+            # TODO Put in correct fractions
+            batch_ws = np.where(batch_ys[:, 0] == 1, 0.5 * (0.3 / 0.7 + 1), 0.5 * (0.7 / 0.3 + 1)) * batch_ws
+            batch_ws = np.reshape(batch_ws, (len(batch_ys), 1))
+            batch_ws = np.require(batch_ws, dtype=np.float32, requirements=['A', 'W', 'C', 'O'])
+            feed_dict = {x: batch_xs, y: batch_ys, w: batch_ws}
             _, loss_value = session.run([minimize_boost, loss_boost], feed_dict=feed_dict)
 
             if step % 500 == 0:
@@ -99,17 +130,34 @@ if __name__ == '__main__':
                 saver.save(session, 'boost_model', global_step=step)
 
     
+        del batch
+    tf.add_to_collection('x', x)
+    tf.add_to_collection('y', y)
+    tf.add_to_collection('p', inference_activation)
+
     saver = tf.train.Saver()
 
-    batch = batch_generator('inference_training_sample.pickle', 'is_quark', 100)
+    # Train inference network
+    batch = batch_generator('inference_training_sample.pickle', 'is_quark', 200)
 
     for step in range(n_iterations):
         batch_xs, batch_ys = next(batch)
         if use_boost:
+            # We apply the boost network to calculate the weights,
+            # the weight formula is w = p / (1-p)
+            # see http://www-ekp.physik.uni-karlsruhe.de/~jwagner/www/publications/AdvancedReweighting_MVA_ACAT2011.pdf
             batch_ws = session.run(boost_activation, feed_dict={x: batch_xs})
             batch_ws = (batch_ws + epsilon) / (1 - batch_ws + epsilon)
+            batch_ws = batch_ws[:, 0]
         else:
             batch_ws = np.ones(len(batch_ys))
+        # We normalise the events, so that there is the same amount of signal-weight and background-weight
+        # in the training, using the ratios we know from the standard datasets
+        # 0.7 signal (quarks), 0.3 background (gluons)
+        # The formula is:
+        #   w_s = 1/2 * (1 + N_B / N_S)
+        #   w_b = 1/2 * (1 + N_S / N_B)
+        batch_ws = np.where(batch_ys[:, 0] == 1, 0.5 * (0.3 / 0.7 + 1), 0.5 * (0.7 / 0.3 + 1)) * batch_ws
         batch_ws = np.reshape(batch_ws, (len(batch_ys), 1))
         batch_ws = np.require(batch_ws, dtype=np.float32, requirements=['A', 'W', 'C', 'O'])
 
@@ -121,27 +169,9 @@ if __name__ == '__main__':
 
         if (step + 1) % 10000 == 0 or (step + 1) == n_iterations:
             print('Save model')
-            saver.save(session, 'inference_model', global_step=step)
-   
-    train_data = pandas.read_pickle('inference_training_sample.pickle')
-    x_train = train_data[variables].values
-    y_train = train_data['is_quark'].values
-    x_train = np.require(x_train, dtype=np.float32, requirements=['A', 'W', 'C', 'O'])
-    probability = session.run(inference_activation, feed_dict={x: x_train})
-    df_result_train = pandas.DataFrame({'y': y_train, 'p': probability[:, 0]})
-    if use_boost:
-        df_result_train.to_pickle('result_train_with_boost.pickle')
-    else:
-        df_result_train.to_pickle('result_train.pickle')
-
-    test_data = pandas.read_pickle('inference_test_sample.pickle')
-    x_test = test_data[variables].values
-    y_test = test_data['is_quark'].values
-    x_test = np.require(x_test, dtype=np.float32, requirements=['A', 'W', 'C', 'O'])
-    probability = session.run(inference_activation, feed_dict={x: x_test})
-    df_result_test = pandas.DataFrame({'y': y_test, 'p': probability[:, 0]})
-    if use_boost:
-        df_result_test.to_pickle('result_test_with_boost.pickle')
-    else:
-        df_result_test.to_pickle('result_test.pickle')
-
+            if use_boost:
+                saver.save(session, 'inference_model_with_boost', global_step=step)
+            else:
+                saver.save(session, 'inference_model_without_boost', global_step=step)
+  
+    del batch

@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+# Thomas Keck and Jochen Gemmler 2017
+
+# We convert all provided root files into pandas.DataFrames
+# and save them as pickle files
+
 import glob
 import root_pandas
 
